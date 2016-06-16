@@ -1,7 +1,8 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0"?>
+<!-- The COPYRIGHT file at the top level of this repository contains the full
+     copyright notices and license terms. -->
 <tryton>
     <data>
-
         <record model="res.group" id="group_guarantee_admin">
             <field name="name">Guarantee Administration</field>
         </record>
@@ -125,32 +126,31 @@
             <field name="inherit" ref="account_invoice.invoice_line_view_form"/>
             <field name="name">invoice_line_form</field>
         </record>
+
         <!-- Menus -->
         <menuitem id="menu_guarantee" name="Guarantee"/>
-
-          <record model="ir.ui.menu-res.group" id="menu_guarantee_group_guarantee">
+        <record model="ir.ui.menu-res.group" id="menu_guarantee_group_guarantee">
             <field name="menu" ref="menu_guarantee"/>
             <field name="group" ref="group_guarantee"/>
-          </record>
+        </record>
 
-          <record model="ir.ui.menu-res.group" id="menu_guarantee_group_guarantee_admin">
+        <record model="ir.ui.menu-res.group" id="menu_guarantee_group_guarantee_admin">
             <field name="menu" ref="menu_guarantee"/>
             <field name="group" ref="group_guarantee_admin"/>
-          </record>
+        </record>
 
-          <menuitem id="menu_guarantee_config" name="Configuration"
-              parent="menu_guarantee" sequence="0" />
+        <menuitem id="menu_guarantee_config" name="Configuration"
+          parent="menu_guarantee" sequence="0" />
 
-          <record model="ir.ui.menu-res.group"
-              id="menu_guarantee_config_group_guarantee_admin">
+        <record model="ir.ui.menu-res.group"
+          id="menu_guarantee_config_group_guarantee_admin">
             <field name="menu" ref="menu_guarantee_config"/>
             <field name="group" ref="group_guarantee_admin"/>
-          </record>
+        </record>
 
-
-          <menuitem action="act_guarantee_guarantee" sequence="20"
-              id="menu_guarantee_guarantee" parent="menu_guarantee"/>
-          <menuitem action="act_guarantee_type" id="menu_guarantee_type"
-              parent="menu_guarantee_config" sequence="20"/>
+        <menuitem action="act_guarantee_guarantee" sequence="20"
+          id="menu_guarantee_guarantee" parent="menu_guarantee"/>
+        <menuitem action="act_guarantee_type" id="menu_guarantee_type"
+          parent="menu_guarantee_config" sequence="20"/>
     </data>
 </tryton>
