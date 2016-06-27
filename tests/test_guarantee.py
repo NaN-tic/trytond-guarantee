@@ -3,56 +3,46 @@
 from decimal import Decimal
 import datetime
 from dateutil.relativedelta import relativedelta
+import doctest
 import unittest
+from trytond.pool import Pool
 import trytond.tests.test_tryton
-from trytond.tests.test_tryton import POOL, DB_NAME, USER, CONTEXT, test_view,\
-    test_depends
-from trytond.transaction import Transaction
+from trytond.tests.test_tryton import ModuleTestCase, with_transaction
 
-from trytond.tests.test_tryton import ModuleTestCase
-from trytond.tests.test_tryton import (doctest_setup, doctest_teardown,
-    doctest_checker)
+from trytond.modules.company.tests import create_company, set_company
 
 
 class TestCase(ModuleTestCase):
     'Test module'
     module = 'guarantee'
 
-    def setUp(self):
-        trytond.tests.test_tryton.install_module('guarantee')
-        self.company = POOL.get('company.company')
-        self.guarantee = POOL.get('guarantee.guarantee')
-        self.guarantee_config = POOL.get('guarantee.configuration')
-        self.guarantee_type = POOL.get('guarantee.type')
-        self.product = POOL.get('product.product')
-        self.sequence = POOL.get('ir.sequence')
-        self.template = POOL.get('product.template')
-        self.uom = POOL.get('product.uom')
-        self.user = POOL.get('res.user')
-
+    @with_transaction()
     def test0010_in_guarante(self):
-        with Transaction().start(DB_NAME, USER, context=CONTEXT) as tx:
-            company, = self.company.search([
-                    ('rec_name', '=', 'Dunder Mifflin'),
-                    ])
-            self.user.write([self.user(USER)], {
-                'main_company': company.id,
-                'company': company.id,
-                })
-            sequence, = self.sequence.search([
+        'Test in_guarante'
+        pool = Pool()
+        Guarantee = pool.get('guarantee.guarantee')
+        GuaranteeConfiguration = pool.get('guarantee.configuration')
+        GuaranteeType = pool.get('guarantee.type')
+        Product = pool.get('product.product')
+        Sequence = pool.get('ir.sequence')
+        Template = pool.get('product.template')
+        Uom = pool.get('product.uom')
+
+        company = create_company()
+        with set_company(company):
+            sequence, = Sequence.search([
                     ('code', '=', 'guarantee.guarantee')
                     ])
-            with tx.set_context(company=company.id):
-                self.guarantee_config.create([{
-                            'guarantee_sequence': sequence.id,
-                            }])
+            GuaranteeConfiguration.create([{
+                        'guarantee_sequence': sequence.id,
+                        }])
 
             today = datetime.date.today()
             tomorrow = today + relativedelta(days=1)
             next_month = today + relativedelta(months=1)
             next_two_month = today + relativedelta(months=2)
-            u, = self.uom.search([('name', '=', 'Unit')])
-            good, service, consumable = self.template.create([{
+            u, = Uom.search([('name', '=', 'Unit')])
+            good, service, consumable = Template.create([{
                         'name': 'Test Guarantee Good',
                         'type': 'goods',
                         'list_price': Decimal(1),
@@ -75,7 +65,7 @@ class TestCase(ModuleTestCase):
                         'cost_price_method': 'fixed',
                         'default_uom': u.id,
                         }])
-            products = self.product.create([{
+            products = Product.create([{
                         'template': good.id,
                         }, {
                         'template': service.id,
@@ -84,7 +74,7 @@ class TestCase(ModuleTestCase):
                         }])
             good_product, service_product, consumable_product = products
 
-            types = self.guarantee_type.create([{
+            types = GuaranteeType.create([{
                         'name': 'Goods',
                         'includes_goods': True,
                         }, {
@@ -153,14 +143,13 @@ class TestCase(ModuleTestCase):
                     'result': True,
                     }]
             for data in tests:
-                with tx.set_context(company=company.id):
-                    guarantee, = self.guarantee.create([{
-                                'party': company.party.id,
-                                'document': str(data['product']),
-                                'type': data['guarantee_type'],
-                                'start_date': data['start_date'],
-                                'end_date': data['end_date'],
-                                }])
+                guarantee, = Guarantee.create([{
+                            'party': company.party.id,
+                            'document': str(data['product']),
+                            'type': data['guarantee_type'],
+                            'start_date': data['start_date'],
+                            'end_date': data['end_date'],
+                            }])
                 self.assertEqual(guarantee.applies_for_product(data['product'],
                         data['test_date']), data['result'])
 
@@ -169,6 +158,7 @@ def suite():
     suite = trytond.tests.test_tryton.suite()
     from trytond.modules.company.tests import test_company
     for test in test_company.suite():
-        suite.addTest(test)
+        if test not in suite and not isinstance(test, doctest.DocTestCase):
+            suite.addTest(test)
     suite.addTests(unittest.TestLoader().loadTestsFromTestCase(TestCase))
     return suite
