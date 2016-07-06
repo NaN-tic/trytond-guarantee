@@ -3,7 +3,6 @@
 from decimal import Decimal
 import datetime
 from dateutil.relativedelta import relativedelta
-import doctest
 import unittest
 from trytond.pool import Pool
 import trytond.tests.test_tryton
@@ -12,28 +11,29 @@ from trytond.tests.test_tryton import ModuleTestCase, with_transaction
 from trytond.modules.company.tests import create_company, set_company
 
 
-class TestCase(ModuleTestCase):
-    'Test module'
+class GuaranteeTestCase(ModuleTestCase):
+    'Test Guarantee module'
     module = 'guarantee'
 
     @with_transaction()
-    def test0010_in_guarante(self):
-        'Test in_guarante'
+    def test_in_guarante(self):
+        'Test in guarante'
         pool = Pool()
+        Sequence = pool.get('ir.sequence')
+        Uom = pool.get('product.uom')
         Guarantee = pool.get('guarantee.guarantee')
-        GuaranteeConfiguration = pool.get('guarantee.configuration')
+        Configuration = pool.get('guarantee.configuration')
         GuaranteeType = pool.get('guarantee.type')
         Product = pool.get('product.product')
-        Sequence = pool.get('ir.sequence')
         Template = pool.get('product.template')
-        Uom = pool.get('product.uom')
+
 
         company = create_company()
         with set_company(company):
             sequence, = Sequence.search([
                     ('code', '=', 'guarantee.guarantee')
                     ])
-            GuaranteeConfiguration.create([{
+            Configuration.create([{
                         'guarantee_sequence': sequence.id,
                         }])
 
@@ -156,9 +156,6 @@ class TestCase(ModuleTestCase):
 
 def suite():
     suite = trytond.tests.test_tryton.suite()
-    from trytond.modules.company.tests import test_company
-    for test in test_company.suite():
-        if test not in suite and not isinstance(test, doctest.DocTestCase):
-            suite.addTest(test)
-    suite.addTests(unittest.TestLoader().loadTestsFromTestCase(TestCase))
+    suite.addTests(unittest.TestLoader().loadTestsFromTestCase(
+        GuaranteeTestCase))
     return suite
