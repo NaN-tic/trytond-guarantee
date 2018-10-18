@@ -1,68 +1,50 @@
 # The COPYRIGHT file at the top level of
 # this repository contains the full copyright notices and license terms.
-from trytond.model import Model, ModelSingleton, ModelSQL, ModelView, fields
+from trytond.model import ModelView, ModelSQL, ModelSingleton, fields
 from trytond.pool import Pool
-from trytond.transaction import Transaction
+from trytond.pyson import Eval
+from trytond.modules.company.model import (
+    CompanyMultiValueMixin, CompanyValueMixin)
 
-__all__ = ['Configuration', 'ConfigurationCompany']
+__all__ = ['Configuration', 'ConfigurationSequence']
 
 
-class Configuration(ModelSingleton, ModelSQL, ModelView):
+class Configuration(
+        ModelSingleton, ModelSQL, ModelView, CompanyMultiValueMixin):
     'Guarantee Configuration'
     __name__ = 'guarantee.configuration'
-
-    guarantee_sequence = fields.Function(fields.Many2One(
-            'ir.sequence', 'Guarante Sequence',
+    guarantee_sequence = fields.MultiValue(fields.Many2One(
+            'ir.sequence', "Guarante Sequence", required=True,
             domain=[
+                ('company', 'in',
+                    [Eval('context', {}).get('company', -1), None]),
                 ('code', '=', 'guarantee.guarantee'),
-                ]), 'get_company_config', 'set_company_config')
+                ]))
 
     @classmethod
-    def get_company_config(self, configs, names):
+    def multivalue_model(cls, field):
         pool = Pool()
-        CompanyConfig = pool.get('guarantee.configuration.company')
-
-        company_id = Transaction().context.get('company')
-        company_configs = CompanyConfig.search([
-                ('company', '=', company_id),
-                ])
-
-        res = {}
-        for fname in names:
-            res[fname] = {
-                configs[0].id: None,
-                }
-            if company_configs:
-                val = getattr(company_configs[0], fname)
-                if isinstance(val, Model):
-                    val = val.id
-                res[fname][configs[0].id] = val
-        return res
-
-    @classmethod
-    def set_company_config(self, configs, name, value):
-        pool = Pool()
-        CompanyConfig = pool.get('guarantee.configuration.company')
-
-        company_id = Transaction().context.get('company')
-        company_configs = CompanyConfig.search([
-                ('company', '=', company_id),
-                ])
-        if company_configs:
-            company_config = company_configs[0]
-        else:
-            company_config = CompanyConfig(company=company_id)
-        setattr(company_config, name, value)
-        company_config.save()
+        if field == 'guarantee_sequence':
+            return pool.get('guarantee.configuration.sequence')
+        return super(Configuration, cls).multivalue_model(field)
 
 
-class ConfigurationCompany(ModelSQL):
-    'Guarantee Configuration per Company'
-    __name__ = 'guarantee.configuration.company'
-
-    company = fields.Many2One('company.company', 'Company', required=True,
-        ondelete='CASCADE', select=True)
-    guarantee_sequence = fields.Many2One('ir.sequence', 'Guarante Sequence',
+class ConfigurationSequence(ModelSQL, CompanyValueMixin):
+    "Guarantee Configuration Sequence"
+    __name__ = 'guarantee.configuration.sequence'
+    guarantee_sequence = fields.Many2One(
+        'ir.sequence', "Guarante Sequence", required=True,
         domain=[
+            ('company', 'in', [Eval('company', -1), None]),
             ('code', '=', 'guarantee.guarantee'),
-            ])
+            ],
+        depends=['company'])
+
+    @classmethod
+    def default_guarantee_sequence(cls):
+        pool = Pool()
+        ModelData = pool.get('ir.model.data')
+        try:
+            return ModelData.get_id('guarantee', 'sequence_guarantee')
+        except KeyError:
+            return None
